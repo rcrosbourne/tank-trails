@@ -72,19 +72,53 @@ function Serialize.dungeon(d)
 end
 
 local function pos(rec, where)
+  local hasPos = rec.x ~= nil or rec.y ~= nil
   for _, k in ipairs({ "x", "y" }) do
     local v = rec[k]
-    if v ~= nil and (type(v) ~= "number" or v < 0 or v > 1) then
+    if hasPos and v == nil then return false, where .. ": " .. k .. " is missing" end
+    if v ~= nil and (type(v) ~= "number" or v ~= v or v < 0 or v > 1) then
       return false, where .. ": " .. k .. " must be between 0 and 1"
+    end
+  end
+  if hasPos then
+    local f = rec.floor
+    if not (type(f) == "number" and f >= 1 and f % 1 == 0) then
+      return false, where .. ": floor must be a positive whole number"
     end
   end
   return true
 end
 
+local BAD = { ["function"] = true, userdata = true, thread = true }
+
+-- The type name of the first function, userdata or thread found anywhere in value; nil when none.
+local function scan(value, seen)
+  local t = type(value)
+  if BAD[t] then return t end
+  if t ~= "table" or seen[value] then return nil end
+  seen[value] = true
+  for k, v in pairs(value) do
+    local bad = scan(k, seen) or scan(v, seen)
+    if bad then return bad end
+  end
+  return nil
+end
+
+local function tableOrNil(d, key)
+  if d[key] ~= nil and type(d[key]) ~= "table" then return false, key .. " must be a table" end
+  return true
+end
+
 function Serialize.validate(d)
   if type(d) ~= "table" then return false, "not a table" end
+  local bad = scan(d, {})
+  if bad then return false, "import contains a " .. bad .. " value" end
   if type(d.id) ~= "number" then return false, "id must be a number" end
   if type(d.name) ~= "string" then return false, "name must be a string" end
+  for _, key in ipairs({ "art", "rooms", "bosses", "routes" }) do
+    local ok, err = tableOrNil(d, key)
+    if not ok then return false, err end
+  end
   for key, rec in pairs(d.rooms or {}) do
     if type(key) ~= "string" or type(rec) ~= "table" then return false, "rooms must map names to tables" end
     local ok, err = pos(rec, "room " .. key)
@@ -96,10 +130,18 @@ function Serialize.validate(d)
     if not ok then return false, err end
   end
   for i, route in ipairs(d.routes or {}) do
+    if type(route) ~= "table" then return false, "route " .. i .. " must be a table" end
     if type(route.name) ~= "string" then return false, "route " .. i .. " has no route name" end
+    local ok, err = tableOrNil(route, "steps")
+    if not ok then return false, "route " .. route.name .. ": " .. err end
     for j, step in ipairs(route.steps or {}) do
+      local where = "route " .. route.name .. " step " .. j
+      if type(step) ~= "table" then return false, where .. " must be a table" end
       local n = (step.room and 1 or 0) + (step.boss and 1 or 0)
-      if n ~= 1 then return false, "route " .. route.name .. " step " .. j .. " needs exactly one of room or boss" end
+      if n ~= 1 then return false, where .. " needs exactly one of room or boss" end
+      local target = step.room or step.boss
+      if type(target) ~= "string" then return false, where .. ": room or boss must be a string" end
+      if step.note ~= nil and type(step.note) ~= "string" then return false, where .. ": note must be a string" end
     end
   end
   return true

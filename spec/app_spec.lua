@@ -226,3 +226,16 @@ describe("App actions", function()
     assert.is_false(dbs.account.settings.autoOpen)
   end)
 end)
+
+describe("App boot recovery", function()
+  it("a start whose first world check throws logs one error and still starts", function()
+    local env, st = fake.new({ now = 1000 })
+    env.date = function() return "2026-10-12" end
+    env.GetInstanceInfo = function() error("boom") end
+    env.IsInInstance = function() error("boom") end
+    local store = Store.new(Init.applyDefaults({}, Init.ACCOUNT_DEFAULTS), Init.applyDefaults({}, Init.CHAR_DEFAULTS), {})
+    local app = App.new({ env = env, store = store, ui = { hud = hudFactory({}) } })
+    assert.is_true(app:start())
+    assert.are.equal(1, #app.errors.entries)
+  end)
+end)

@@ -18,7 +18,7 @@ boot:SetScript("OnEvent", function(self, _, name)
   }
   local app = ns.App.new({ env = _G, store = store, ui = ui })
   TankTrails.app = app
-  app:start()
   TankTrails.commands = ns.Commands.create(app, _G, ui)
+  app:start()
   app:print("Loaded. /tt help for commands.")
 end)

@@ -42,7 +42,7 @@ function App:start()
     self.hud = ui.hud(self.store:settings().hud, function() self:toggleMap() end)
   end
   self.ticker = self.env.C_Timer.NewTicker(1, wrap("tick", function() self:onTick() end))
-  self:onWorld()
+  wrap("start", function() self:onWorld() end)()
   return true
 end
 
