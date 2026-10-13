@@ -118,7 +118,9 @@ function Serialize.parse(text)
   local vcall, vok, verr = pcall(Serialize.validate, got)
   if not vcall then return nil, "Import failed: " .. tostring(vok) end
   if not vok then return nil, verr end
-  return Serialize.clean(got)
+  local cok, cleaned = pcall(Serialize.clean, got)
+  if not cok then return nil, "Import failed: " .. tostring(cleaned) end
+  return cleaned
 end
 
 return Serialize
