@@ -2,3 +2,4 @@
 .lua/
 .DS_Store
 .idea/
+.claude/worktrees/

@@ -1,0 +1,28 @@
+## Interface: 16001
+## Title: TankTrails
+## Notes: Room-level dungeon navigation and tank notes for WoW Forever
+## Author: rcrosbourne
+## Version: 0.1.0
+## SavedVariables: TankTrailsDB
+## SavedVariablesPerCharacter: TankTrailsCharDB
+
+Core\Init.lua
+Core\Util.lua
+Wow\Safe.lua
+Wow\InstanceWatch.lua
+Model\Geometry.lua
+Model\Recorder.lua
+Model\Route.lua
+Model\Merge.lua
+Model\Promote.lua
+Model\Serialize.lua
+Wow\Store.lua
+Wow\Events.lua
+UI\Theme.lua
+UI\Widgets.lua
+UI\TextBox.lua
+UI\Hud.lua
+Core\App.lua
+Core\Commands.lua
+Data\Dungeons.xml
+Core\Boot.lua
