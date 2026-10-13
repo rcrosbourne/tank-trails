@@ -315,6 +315,9 @@ function App:debugLines()
       lines[#lines + 1] = string.format("%6.1f %s %s", ev.t, ev.kind, tostring(ev.room or ev.name or ev.text or ""))
     end
   end
+  local stats = self.events and self.events:statsLines() or {}
+  if #stats == 0 then lines[#lines + 1] = "payloads: all readable" end
+  for _, l in ipairs(stats) do lines[#lines + 1] = l end
   lines[#lines + 1] = "errors: " .. #self.errors.entries
   return lines
 end

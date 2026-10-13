@@ -13,7 +13,7 @@ Events.LIST = {
 }
 
 function Events.create(env, handlers, trap)
-  local self = setmetatable({ env = env, handlers = handlers }, Events)
+  local self = setmetatable({ env = env, handlers = handlers, stats = {} }, Events)
   local frame = env.CreateFrame("Frame")
   for _, e in ipairs(Events.LIST) do frame:RegisterEvent(e) end
   local dispatch = function(event, ...) self:dispatch(event, ...) end
@@ -23,7 +23,34 @@ function Events.create(env, handlers, trap)
   return self
 end
 
-function Events:zoneText() return Safe.string(self.env, self.env.GetMinimapZoneText()) end
+-- Reads a payload through Safe, counting the nil and secret ones under label for /tt debug.
+function Events:field(raw, kind, label)
+  local env = self.env
+  local stat = self.stats[label]
+  if not stat then
+    stat = { nils = 0, secrets = 0 }
+    self.stats[label] = stat
+  end
+  if env.issecretvalue and env.issecretvalue(raw) then
+    stat.secrets = stat.secrets + 1
+  elseif raw == nil then
+    stat.nils = stat.nils + 1
+  end
+  return Safe[kind](env, raw)
+end
+
+function Events:statsLines()
+  local lines = {}
+  for label, st in pairs(self.stats) do
+    if st.nils > 0 or st.secrets > 0 then
+      lines[#lines + 1] = string.format("%s: %d nil, %d secret", label, st.nils, st.secrets)
+    end
+  end
+  table.sort(lines)
+  return lines
+end
+
+function Events:zoneText() return self:field(self.env.GetMinimapZoneText(), "string", "ZONE.text") end
 
 -- The name of the current target when it exists, is not a player, and nothing about it is secret.
 function Events:targetName()
@@ -32,21 +59,22 @@ function Events:targetName()
   local isPlayer = env.UnitIsPlayer("target")
   if env.issecretvalue and env.issecretvalue(isPlayer) then return nil end
   if isPlayer then return nil end
-  return Safe.string(env, env.UnitName("target"))
+  return self:field(env.UnitName("target"), "string", "TARGET.name")
 end
 
 function Events:dispatch(event, ...)
-  local h, env = self.handlers, self.env
+  local h = self.handlers
   if event == "PLAYER_ENTERING_WORLD" then
     h.world()
   elseif event == "ZONE_CHANGED" or event == "ZONE_CHANGED_INDOORS" or event == "ZONE_CHANGED_NEW_AREA" then
     h.zone(self:zoneText(), event == "ZONE_CHANGED_NEW_AREA")
   elseif event == "ENCOUNTER_END" then
     local id, name, _, _, success = ...
-    h.boss(Safe.number(env, id), Safe.string(env, name), Safe.number(env, success) == 1)
+    h.boss(self:field(id, "number", "ENCOUNTER_END.id"), self:field(name, "string", "ENCOUNTER_END.name"),
+      self:field(success, "number", "ENCOUNTER_END.success") == 1)
   elseif event == "BOSS_KILL" then
     local id, name = ...
-    h.boss(Safe.number(env, id), Safe.string(env, name), true)
+    h.boss(self:field(id, "number", "BOSS_KILL.id"), self:field(name, "string", "BOSS_KILL.name"), true)
   elseif event == "PLAYER_REGEN_DISABLED" then
     h.combatStart()
   elseif event == "PLAYER_REGEN_ENABLED" then
