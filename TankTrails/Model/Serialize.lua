@@ -115,7 +115,8 @@ function Serialize.parse(text)
   local ok, perr = pcall(fn)
   if not ok then return nil, "Import failed: " .. tostring(perr) end
   if count ~= 1 then return nil, "Expected exactly one TankTrails_RegisterDungeon call, found " .. count end
-  local vok, verr = Serialize.validate(got)
+  local vcall, vok, verr = pcall(Serialize.validate, got)
+  if not vcall then return nil, "Import failed: " .. tostring(vok) end
   if not vok then return nil, verr end
   return Serialize.clean(got)
 end
