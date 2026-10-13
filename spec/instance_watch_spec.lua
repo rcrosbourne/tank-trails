@@ -1,0 +1,28 @@
+local fake = require("helpers.fake_env")
+local InstanceWatch = require("Wow.InstanceWatch")
+
+describe("InstanceWatch.current", function()
+  it("returns nil outside instances", function()
+    local env = fake.new()
+    assert.is_nil(InstanceWatch.current(env))
+  end)
+
+  it("returns nil in raids", function()
+    local env = fake.new({ instance = { kind = "raid", name = "Onyxia's Lair", id = 249 } })
+    assert.is_nil(InstanceWatch.current(env))
+  end)
+
+  it("returns id and name in a party dungeon", function()
+    local env = fake.new({ instance = { name = "The Deadmines", id = 36 } })
+    local id, name = InstanceWatch.current(env)
+    assert.are.equal(36, id)
+    assert.are.equal("The Deadmines", name)
+  end)
+
+  it("returns nil while the name or id is missing during loading", function()
+    local env = fake.new({ instance = { name = nil, id = 36 } })
+    assert.is_nil(InstanceWatch.current(env))
+    env = fake.new({ instance = { name = "The Deadmines", id = nil } })
+    assert.is_nil(InstanceWatch.current(env))
+  end)
+end)
