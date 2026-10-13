@@ -1,0 +1,65 @@
+local stub = require("helpers.wow_stub")
+
+describe("Hud", function()
+  local Hud, settings, clicks
+  before_each(function()
+    stub.install()
+    package.loaded["UI.Hud"] = nil
+    Hud = require("UI.Hud")
+    settings = { scale = 1, locked = false, shown = true }
+    clicks = 0
+  end)
+  after_each(stub.uninstall)
+
+  local function hud() return Hud.create(settings, function() clicks = clicks + 1 end) end
+
+  it("hides outside dungeons and shows learning mode", function()
+    local h = hud()
+    h:update({ mode = "none" })
+    assert.is_false(h.frame.shown)
+    h:update({ mode = "learning", dungeonName = "Cave", currentRoom = "Deep Cave", runSeconds = 65, counts = { rooms = 2, bosses = 1 } })
+    assert.is_true(h.frame.shown)
+    assert.are.equal("Cave  ·  learning  ·  1:05", h.line1.text)
+    assert.are.equal("Deep Cave", h.line2.text)
+    assert.are.equal("Learning: 2 rooms, 1 bosses", h.line3.text)
+    assert.is_false(h.arrow.shown)
+  end)
+
+  it("shows route mode with arrow, notes, off-route and floor hints", function()
+    local h = hud()
+    h:update({ mode = "route", dungeonName = "The Deadmines", routeName = "Standard", currentRoom = "The Deadmines",
+      runSeconds = 5, done = 1, total = 3, note = "first packs", next = "Mast Room", nextKind = "room", bearing = math.pi / 2 })
+    assert.are.equal("The Deadmines  ·  Standard  ·  Bosses 1/3  ·  0:05", h.line1.text)
+    assert.are.equal("The Deadmines", h.line2.text)
+    assert.are.equal("Next: Mast Room", h.line3.text)
+    assert.is_true(h.arrow.shown)
+    assert.are.equal(-math.pi / 2, h.arrow.rotation)
+    assert.are.equal("first packs", h.line4.text)
+    h:update({ mode = "route", dungeonName = "D", routeName = "R", currentRoom = "Secret Cave", offRoute = "Secret Cave",
+      runSeconds = 0, done = 0, total = 1, next = "Mr. Smite", nextKind = "boss", nextNote = "clear the deck", floorHint = "up", floorName = "Ironclad Cove" })
+    assert.are.equal("? Secret Cave", h.line2.text)
+    assert.are.equal("Next: Mr. Smite  (up to Ironclad Cove)", h.line3.text)
+    assert.is_false(h.arrow.shown)
+    assert.are.equal("next: clear the deck", h.line4.text)
+    h:update({ mode = "route", dungeonName = "D", routeName = "R", runSeconds = 0, done = 1, total = 1, complete = true })
+    assert.are.equal("Route complete", h.line3.text)
+  end)
+
+  it("toggles, scales, locks and clicks", function()
+    local h = hud()
+    h:toggle()
+    assert.is_false(h.shown)
+    assert.is_false(settings.shown)
+    h:update({ mode = "learning", dungeonName = "C", runSeconds = 0, counts = { rooms = 0, bosses = 0 } })
+    assert.is_false(h.frame.shown)
+    h:toggle()
+    assert.is_true(h.frame.shown)
+    h:setScale(1.5)
+    assert.are.equal(1.5, h.frame.scale)
+    h:setLocked(true)
+    h.frame.scripts.OnDragStart()
+    assert.is_nil(h.frame.moving)
+    h.frame.scripts.OnClick()
+    assert.are.equal(1, clicks)
+  end)
+end)

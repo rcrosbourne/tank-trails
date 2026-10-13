@@ -24,6 +24,8 @@ local function widget(kind)
     if k == "CreateFontString" or k == "CreateTexture" then
       return function(self) local c = widget(k); table.insert(self.children, c); return c end
     end
+    -- WoW API methods are capitalised; lowercase keys are plain fields and read as nil until set.
+    if type(k) == "string" and k:match("^%l") then return nil end
     return function() end
   end })
 end
