@@ -31,6 +31,7 @@ function Store:last() return self.char.last end
 function Store:setLast(id, name) self.char.last = { id = id, name = name } end
 
 function Store:fileRun(run)
+  run.lastRoom, run.lastTarget, run.lastBoss, run.pull = nil, nil, nil, nil
   local runs = self.account.runs
   runs[run.dungeon] = runs[run.dungeon] or {}
   table.insert(runs[run.dungeon], 1, run)

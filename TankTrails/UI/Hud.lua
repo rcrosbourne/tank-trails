@@ -18,7 +18,7 @@ function Hud.create(settings, onClick)
   local self = setmetatable({ settings = settings, shown = settings.shown ~= false }, Hud)
   local f = CreateFrame("Button", "TankTrailsHud", UIParent, "BackdropTemplate")
   f:SetSize(Hud.WIDTH, Hud.HEIGHT)
-  f:SetPoint(settings.point or "TOP", UIParent, settings.point or "TOP", settings.x or 0, settings.y or -140)
+  f:SetPoint(settings.point or "TOP", UIParent, settings.relativePoint or settings.point or "TOP", settings.x or 0, settings.y or -140)
   f:SetScale(settings.scale or 1)
   f:SetClampedToScreen(true)
   f:SetMovable(true)
@@ -33,8 +33,8 @@ function Hud.create(settings, onClick)
   f:SetScript("OnDragStop", function()
     f.moving = nil
     f:StopMovingOrSizing()
-    local point, _, _, x, y = f:GetPoint()
-    settings.point, settings.x, settings.y = point, x, y
+    local point, _, relativePoint, x, y = f:GetPoint()
+    settings.point, settings.relativePoint, settings.x, settings.y = point, relativePoint, x, y
   end)
   f:SetScript("OnClick", function() onClick() end)
 

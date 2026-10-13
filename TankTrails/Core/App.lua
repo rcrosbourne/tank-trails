@@ -130,12 +130,16 @@ function App:onBoss(id, name, success)
 end
 
 function App:onCombat(started)
+  self.inCombat = started
   if not self.run then return end
   if started then Recorder.pullStart(self.run, self.now()) else Recorder.pullEnd(self.run, self.now()) end
 end
 
 function App:onDead() if self.run then Recorder.death(self.run) end end
-function App:onTarget(name) if self.run then Recorder.target(self.run, name, self.now()) end end
+-- Target names are only read out of combat (spec §6.4).
+function App:onTarget(name)
+  if self.run and not self.inCombat then Recorder.target(self.run, name, self.now()) end
+end
 
 -- Where a step sits on the map: a room's own position; a boss's own, else its room's (spec §5.1).
 local function position(d, step)
@@ -201,6 +205,7 @@ function App:note(text)
   if not self.run or self.away then return false, "Not in a dungeon." end
   local view = self:view()
   if view.mode == "learning" then
+    if Util.trim(text) == "" then return false, "Note text is empty." end
     Recorder.note(self.run, Util.trim(text), self.now())
     return true, "Note saved for " .. tostring(view.currentRoom) .. "."
   end
@@ -333,6 +338,7 @@ function App:toggleHud()
   if not self.hud then return end
   self.hud:toggle()
   self.store:settings().hud.shown = self.hud.shown
+  self:refresh()
 end
 
 function App:lockHud()

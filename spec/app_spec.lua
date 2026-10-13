@@ -328,3 +328,58 @@ describe("App debug payload counts", function()
     assert.is_nil(text:find("all readable", 1, true))
   end)
 end)
+
+describe("App polish", function()
+  local DM = { name = "The Deadmines", id = 36 }
+
+  it("toggleHud pushes a hud update", function()
+    local app, _, _, updates = boot({ now = 1000, instance = DM, zoneText = "The Deadmines" })
+    local n = #updates
+    app:toggleHud()
+    assert.is_true(#updates > n)
+  end)
+
+  it("an empty note is refused in learning mode", function()
+    local app = boot({ now = 1000, instance = DM, zoneText = "The Deadmines" })
+    local ok, msg = app:note("   ")
+    assert.is_false(ok)
+    assert.are.equal("Note text is empty.", msg)
+  end)
+
+  it("a filed run carries no transient fields", function()
+    local app, frame, st, _, dbs = boot({ now = 1000, instance = DM, zoneText = "The Deadmines" })
+    st.target = { isPlayer = false, name = "Goblin" }
+    frame:fire("PLAYER_TARGET_CHANGED")
+    frame:fire("PLAYER_REGEN_DISABLED")
+    frame:fire("ENCOUNTER_END", 1, "Rhahk'Zor", 1, 5, 1)
+    st.instance, st.zoneText, st.now = nil, "Westfall", 1500
+    frame:fire("PLAYER_ENTERING_WORLD")
+    st.now = 3300
+    st.ticker()
+    local filed = dbs.account.runs[36][1]
+    assert.is_nil(filed.pull)
+    assert.is_nil(filed.lastRoom)
+    assert.is_nil(filed.lastTarget)
+    assert.is_nil(filed.lastBoss)
+  end)
+
+  it("a target change during combat does not become the next pull's target", function()
+    local app, frame, st = boot({ now = 1000, instance = DM, zoneText = "The Deadmines" })
+    st.target = { isPlayer = false, name = "Goblin" }
+    frame:fire("PLAYER_TARGET_CHANGED")
+    st.now = 1001
+    frame:fire("PLAYER_REGEN_DISABLED")
+    st.target = { isPlayer = false, name = "Other" }
+    frame:fire("PLAYER_TARGET_CHANGED")
+    st.now = 1004
+    frame:fire("PLAYER_REGEN_ENABLED")
+    st.now = 1006
+    frame:fire("PLAYER_REGEN_DISABLED")
+    local pulls = {}
+    for _, ev in ipairs(app.run.events) do
+      if ev.kind == "pull" then pulls[#pulls + 1] = ev end
+    end
+    assert.are.equal(2, #pulls)
+    assert.are.equal("Goblin", pulls[2].target)
+  end)
+end)

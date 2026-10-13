@@ -10,7 +10,7 @@ Room-level dungeon navigation and tank notes for WoW Forever. Spec: `docs/superp
 `tools/install.sh "/Applications/World of Warcraft/_classic_beta_/Interface/AddOns"`, then run `docs/superpowers/notes/in-game-checklist.md`.
 
 ## Commands
-See `/tt` in game, or spec §7.5.
+`/tt help` lists the commands in game; see also spec §7.5.
 
 ## Layout
 - `TankTrails/Model` pure logic, `TankTrails/Wow` game adapters, `TankTrails/UI` frames, `TankTrails/Core` wiring, `TankTrails/Data` shipped dungeons.
