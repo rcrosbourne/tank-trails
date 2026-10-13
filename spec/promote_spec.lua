@@ -60,4 +60,21 @@ describe("Promote.run", function()
     assert.is_nil(route.steps[3].note)
     assert.are.equal("two", route.steps[4].note)
   end)
+
+  it("carries notes by position: an unnoted old step is consumed, not skipped", function()
+    local old = { name = "d", steps = { { room = "A" }, { room = "B", note = "y" }, { room = "A", note = "z" } } }
+    local evs = { room(0, "A"), room(30, "B"), room(60, "A") }
+    local route = Promote.run(run(evs, 1200), old, "d", "d", 1200)
+    assert.is_nil(route.steps[1].note)
+    assert.are.equal("y", route.steps[2].note)
+    assert.are.equal("z", route.steps[3].note)
+  end)
+
+  it("a learning-mode note wins but still consumes the old counterpart", function()
+    local old = { name = "d", steps = { { room = "A", note = "old one" }, { room = "A", note = "old two" } } }
+    local evs = { room(0, "A"), { t = 5, kind = "note", room = "A", text = "fresh" }, room(30, "B"), room(60, "A") }
+    local route = Promote.run(run(evs, 1200), old, "d", "d", 1200)
+    assert.are.equal("fresh", route.steps[1].note)
+    assert.are.equal("old two", route.steps[3].note)
+  end)
 end)

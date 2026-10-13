@@ -88,12 +88,11 @@ function Promote.run(run, oldRoute, name, today, now)
   if oldRoute then
     local used = {}
     for _, s in ipairs(steps) do
-      if not s.note then
-        for j, o in ipairs(oldRoute.steps or {}) do
-          if not used[j] and o.note and ((s.room and o.room == s.room) or (s.boss and o.boss == s.boss)) then
-            s.note, used[j] = o.note, true
-            break
-          end
+      for j, o in ipairs(oldRoute.steps or {}) do
+        if not used[j] and ((s.room and o.room == s.room) or (s.boss and o.boss == s.boss)) then
+          used[j] = true
+          if not s.note then s.note = o.note end
+          break
         end
       end
     end
