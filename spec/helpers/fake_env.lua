@@ -8,7 +8,7 @@ function M.new(state)
   state.secrets = state.secrets or {}
   state.chat = state.chat or {}
   local env = {}
-  env.issecretvalue = function(v) return state.secrets[v] == true end
+  env.issecretvalue = function(v) return v ~= nil and state.secrets[v] == true end
   env.GetMinimapZoneText = function() return state.zoneText end
   env.IsInInstance = function()
     if not state.instance then return false, "none" end

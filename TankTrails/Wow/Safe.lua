@@ -7,7 +7,7 @@ ns.Safe = Safe
 -- nil for any value the client marks secret (Midnight secret values, spec §3); the value otherwise.
 function Safe.value(env, v)
   local check = env.issecretvalue
-  if v ~= nil and check and check(v) then return nil end
+  if check and check(v) then return nil end
   return v
 end
 
