@@ -30,6 +30,7 @@ function M.new(state)
   env.time = function() return state.now or 0 end
   env.DEFAULT_CHAT_FRAME = { AddMessage = function(_, msg) table.insert(state.chat, msg) end }
   env.StaticPopupDialogs = {}
+  env.SlashCmdList = {}
   env.StaticPopup_Show = function(which, text1, text2, data)
     state.popup = { which = which, data = data }
     return {}
