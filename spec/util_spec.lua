@@ -1,0 +1,32 @@
+local Util = require("Core.Util")
+
+describe("Util", function()
+  it("caps the error log", function()
+    local log = Util.newErrorLog(2)
+    log:add("a", "1"); log:add("b", "2"); log:add("c", "3")
+    assert.are.equal(2, #log.entries)
+    assert.are.equal("b", log.entries[1].label)
+  end)
+
+  it("safeCall returns results on success and logs on failure", function()
+    local log = Util.newErrorLog()
+    assert.are.equal(3, Util.safeCall(log, "add", function(a, b) return a + b end, 1, 2))
+    assert.is_nil(Util.safeCall(log, "boom", function() error("bad") end))
+    assert.are.equal(1, #log.entries)
+    assert.truthy(log.entries[1].message:find("bad"))
+  end)
+
+  it("rounds, sorts keys, copies deeply, trims", function()
+    assert.are.equal(0.1235, Util.round4(0.12345))
+    assert.are.equal(8.2, Util.round1(8.24))
+    assert.are.same({ "a", "b", "c" }, Util.sortedKeys({ c = 1, a = 2, b = 3 }))
+    local src = { rooms = { x = { 1 } } }
+    local copy = Util.deepCopy(src)
+    copy.rooms.x[1] = 2
+    assert.are.equal(1, src.rooms.x[1])
+    assert.are.equal("hi", Util.trim("  hi \n"))
+    assert.is_true(Util.isArray({ 1, 2 }))
+    assert.is_false(Util.isArray({ a = 1 }))
+    assert.is_false(Util.isArray({}))
+  end)
+end)
