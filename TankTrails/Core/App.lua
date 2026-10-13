@@ -54,6 +54,7 @@ end
 -- Spec §6.1
 function App:onWorld()
   local id, name = InstanceWatch.current(self.env)
+  if not id and InstanceWatch.pending(self.env) then return end
   local saved = self.store:run()
   if id then
     local run, stale = Recorder.open(saved, id, name, self.now())
@@ -79,7 +80,7 @@ function App:onZone(text, newArea)
     if newArea then self:onWorld() end
     return
   end
-  if newArea and InstanceWatch.current(self.env) ~= self.run.dungeon then return self:onWorld() end
+  if newArea and not InstanceWatch.pending(self.env) and InstanceWatch.current(self.env) ~= self.run.dungeon then return self:onWorld() end
   local ev = Recorder.room(self.run, text, self.now())
   if ev then self.store:seenRoom(self.run.dungeon, ev.room, self.now()) end
   self:refresh()
@@ -261,7 +262,7 @@ function App:importText(text, force)
     self.dungeon = self.store:effective(d.id, self.run.name)
     self:refresh()
   end
-  return true, "Imported " .. d.name .. " (" .. #d.routes .. " routes)."
+  return true, "Imported " .. d.name .. " (" .. #(d.routes or {}) .. " routes)."
 end
 
 function App:reset(force)

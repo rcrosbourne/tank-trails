@@ -17,4 +17,12 @@ function InstanceWatch.current(env)
   return id, name
 end
 
+-- True while the client says the player is in a party instance but GetInstanceInfo has no name or id
+-- yet (a loading screen). Nothing should open or close a run in this state (spec §6.1).
+function InstanceWatch.pending(env)
+  local inInstance, kind = env.IsInInstance()
+  if not inInstance or kind ~= "party" then return false end
+  return InstanceWatch.current(env) == nil
+end
+
 return InstanceWatch
