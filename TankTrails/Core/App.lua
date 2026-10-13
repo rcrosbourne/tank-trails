@@ -61,6 +61,7 @@ function App:onWorld()
     if stale then
       self.store:fileRun(stale)
       self.last = { id = stale.dungeon, name = stale.name }
+      self.store:setLast(stale.dungeon, stale.name)
     end
     self.store:setRun(run)
     self.run, self.dungeon, self.away = run, self.store:effective(id, name), false
@@ -97,6 +98,7 @@ function App:file(run)
   self.store:fileRun(run)
   self.store:setRun(nil)
   self.last = { id = run.dungeon, name = run.name }
+  self.store:setLast(run.dungeon, run.name)
 end
 
 function App:onTick()
@@ -190,7 +192,8 @@ end
 -- The dungeon commands act on: the one the player is in, else the one they last left this session.
 function App:context()
   if self.run then return self.run.dungeon, self.run.name, self.run end
-  if self.last then return self.last.id, self.last.name, self.store:lastRun(self.last.id) end
+  local last = self.last or self.store:last()
+  if last then return last.id, last.name, self.store:lastRun(last.id) end
   return nil
 end
 

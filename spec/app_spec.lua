@@ -297,3 +297,21 @@ describe("App boot recovery", function()
     assert.are.equal(1, #app.errors.entries)
   end)
 end)
+
+describe("App last dungeon across a relog", function()
+  it("promotes the filed run after the run expired and the game restarted", function()
+    local app, frame, st, _, dbs = boot({ now = 1000, instance = { name = "The Deadmines", id = 36 }, zoneText = "The Deadmines" })
+    st.now, st.zoneText = 1030, "Mast Room"
+    frame:fire("ZONE_CHANGED")
+    st.instance, st.zoneText, st.now = nil, "Westfall", 1500
+    frame:fire("PLAYER_ENTERING_WORLD")
+    st.now = 3300
+    st.ticker()
+    assert.is_nil(dbs.char.run)
+    local app2 = boot({ now = 3400, zoneText = "Westfall" }, nil, dbs)
+    assert.is_nil(app2.run)
+    local ok = app2:promote()
+    assert.is_true(ok)
+    assert.are.equal("Recorded 2026-10-12", dbs.account.dungeons[36].routes[1].name)
+  end)
+end)

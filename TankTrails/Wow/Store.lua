@@ -27,6 +27,9 @@ end
 function Store:run() return self.char.run end
 function Store:setRun(run) self.char.run = run end
 
+function Store:last() return self.char.last end
+function Store:setLast(id, name) self.char.last = { id = id, name = name } end
+
 function Store:fileRun(run)
   local runs = self.account.runs
   runs[run.dungeon] = runs[run.dungeon] or {}
