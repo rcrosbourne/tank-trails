@@ -82,6 +82,7 @@ Four layers. Game calls live only in Wow and UI; Model takes plain tables and re
 | `Core/App` | Wiring: run lifecycle, event dispatch, replay on change, view refresh | Init | everything |
 | `Core/Commands` | `/tt` handlers | Init | App, Promote, Serialize, Store |
 | `Core/Util` | Error trap, timers, string helpers | all | game |
+| `Core/Boot` | `ADDON_LOADED`: SavedVariables defaults, builds Store, App, UI and Commands (game only) | — | everything |
 
 ## 5. Data model
 
@@ -310,7 +311,7 @@ UI is covered by the in-game checklist only.
 dungeon_map/
   TankTrails/
     TankTrails.toc            ## Interface: 16001, SavedVariables: TankTrailsDB, SavedVariablesPerCharacter: TankTrailsCharDB
-    Core/   Init.lua App.lua Util.lua Commands.lua
+    Core/   Init.lua App.lua Util.lua Commands.lua Boot.lua
     Model/  Route.lua Recorder.lua Promote.lua Merge.lua Serialize.lua Geometry.lua
     Wow/    Safe.lua InstanceWatch.lua Events.lua MapArt.lua Store.lua
     UI/     Theme.lua Hud.lua MapWindow.lua Canvas.lua RoutePanel.lua Line.lua
