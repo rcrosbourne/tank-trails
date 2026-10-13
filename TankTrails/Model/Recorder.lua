@@ -6,6 +6,7 @@ local Recorder = {}
 ns.Recorder = Recorder
 
 Recorder.BOSS_WINDOW = 5     -- seconds: two boss events with one identity are one kill (spec §6.3)
+Recorder.GRACE = 1800        -- seconds a run stays resumable after the player leaves its dungeon (spec §6.1)
 Recorder.TARGET_WINDOW = 10  -- seconds: a pull takes the last out-of-combat target this recent (spec §6.4)
 
 local function stamp(run, now) return Util.round1(now - run.startedAt) end
@@ -24,13 +25,27 @@ end
 -- Resume saved when it is this dungeon's unfinished run; otherwise start fresh and hand back the
 -- unfinished one, ended, for filing (spec §6.1).
 function Recorder.open(saved, id, name, now)
-  if saved and saved.dungeon == id and not saved.endedAt then return saved, nil end
+  if saved and saved.dungeon == id and not saved.endedAt then
+    saved.leftAt = nil
+    return saved, nil
+  end
   local stale
   if saved and not saved.endedAt then
     saved.endedAt = now
     stale = saved
   end
   return { dungeon = id, name = name, startedAt = now, events = {} }, stale
+end
+
+-- Marks the run as away; true only the first time.
+function Recorder.leave(run, now)
+  if run.leftAt then return false end
+  run.leftAt = now
+  return true
+end
+
+function Recorder.expired(run, now)
+  return run.leftAt ~= nil and now - run.leftAt >= Recorder.GRACE
 end
 
 function Recorder.close(run, now)

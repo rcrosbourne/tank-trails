@@ -21,7 +21,9 @@ Inside any dungeon, out of combat:
 
 ### Setup
 1. Log in. Chat shows "TankTrails: Loaded." `/tt help` lists the commands. No Lua errors; `/tt errors` says "No errors."
-2. `/tt hud` hides and shows the HUD. Drag it; `/tt lock`; dragging no longer moves it. `/tt scale 1.3` grows it.
+2. Log out and back in inside a dungeon (not /reload): the HUD returns on the same room.
+3. Import an export where a placed room has no `floor`: the import is rejected with a message and nothing changes.
+4. `/tt hud` hides and shows the HUD. Drag it; `/tt lock`; dragging no longer moves it. `/tt scale 1.3` grows it.
 
 ### Learning mode (a dungeon with no route)
 1. Enter the dungeon. The HUD appears with the dungeon name, "learning", a clock, and the current room.
@@ -30,7 +32,7 @@ Inside any dungeon, out of combat:
 4. `/tt note pull these back` — chat confirms the note for the current room.
 5. Kill the first boss. Line 3's boss count goes up.
 6. `/reload` mid-run. The HUD comes back on the same room with the same counts.
-7. Leave the dungeon. Chat says the run was recorded. `/tt promote` — chat confirms the route and step count.
+7. Leave the dungeon. The HUD hides and chat says "Re-enter within 30 minutes to continue the run, or /tt promote it now." `/tt promote` works from outside — chat confirms the route and step count.
 8. `/tt export` opens a window with the dungeon text; it includes your note on that room's step. Copy it somewhere.
 
 ### Route mode

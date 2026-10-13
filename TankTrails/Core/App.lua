@@ -58,19 +58,21 @@ function App:onWorld()
   local saved = self.store:run()
   if id then
     local run, stale = Recorder.open(saved, id, name, self.now())
-    if stale then self.store:fileRun(stale) end
-    self.store:setRun(run)
-    self.run, self.dungeon = run, self.store:effective(id, name)
-    self:onZone(self.events:zoneText(), false)
-  else
-    if saved and not saved.endedAt then
-      Recorder.close(saved, self.now())
-      self.store:fileRun(saved)
-      self.store:setRun(nil)
-      self.last = { id = saved.dungeon, name = saved.name }
-      self:print("Run in " .. tostring(saved.name) .. " recorded. /tt promote turns it into a route.")
+    if stale then
+      self.store:fileRun(stale)
+      self.last = { id = stale.dungeon, name = stale.name }
     end
-    self.run, self.dungeon = nil, nil
+    self.store:setRun(run)
+    self.run, self.dungeon, self.away = run, self.store:effective(id, name), false
+    self:onZone(self.events:zoneText(), false)
+  elseif saved and not saved.endedAt then
+    if Recorder.leave(saved, self.now()) then
+      self:print("Left " .. tostring(saved.name) .. ". Re-enter within 30 minutes to continue the run, or /tt promote it now.")
+    end
+    self.run, self.away = saved, true
+    self.dungeon = self.dungeon or self.store:effective(saved.dungeon, saved.name)
+  else
+    self.run, self.dungeon, self.away = nil, nil, false
   end
   self:refresh()
 end
@@ -80,14 +82,34 @@ function App:onZone(text, newArea)
     if newArea then self:onWorld() end
     return
   end
+  if self.away then
+    if newArea or InstanceWatch.current(self.env) then self:onWorld() end
+    return
+  end
   if newArea and not InstanceWatch.pending(self.env) and InstanceWatch.current(self.env) ~= self.run.dungeon then return self:onWorld() end
   local ev = Recorder.room(self.run, text, self.now())
   if ev then self.store:seenRoom(self.run.dungeon, ev.room, self.now()) end
   self:refresh()
 end
 
+function App:file(run)
+  Recorder.close(run, self.now())
+  self.store:fileRun(run)
+  self.store:setRun(nil)
+  self.last = { id = run.dungeon, name = run.name }
+end
+
 function App:onTick()
-  if not self.run then
+  local now = self.now()
+  if self.run and Recorder.expired(self.run, now) then
+    local run = self.run
+    self:file(run)
+    self:print("Run in " .. tostring(run.name) .. " recorded. /tt promote turns it into a route.")
+    self.run, self.dungeon, self.away = nil, nil, false
+    self:refresh()
+    return
+  end
+  if not self.run or self.away then
     if InstanceWatch.current(self.env) then self:onWorld() end
     return
   end
@@ -127,7 +149,7 @@ end
 
 function App:view()
   local run, d = self.run, self.dungeon
-  if not run or not d then return { mode = "none" } end
+  if not run or not d or self.away then return { mode = "none" } end
   local v = { dungeonName = d.name, currentRoom = Recorder.currentRoom(run), runSeconds = self.now() - run.startedAt }
   local route = Route.select(d, d.activeRoute, run.events)
   self.route = route
@@ -173,7 +195,7 @@ function App:context()
 end
 
 function App:note(text)
-  if not self.run then return false, "Not in a dungeon." end
+  if not self.run or self.away then return false, "Not in a dungeon." end
   local view = self:view()
   if view.mode == "learning" then
     Recorder.note(self.run, Util.trim(text), self.now())
@@ -187,7 +209,7 @@ function App:note(text)
 end
 
 function App:tickBoss(name)
-  if not self.run then return false, "Not in a dungeon." end
+  if not self.run or self.away then return false, "Not in a dungeon." end
   local view = self:view()
   if not name then
     if view.mode ~= "route" then return false, "No route here. Give the boss a name: /tt boss <name>." end

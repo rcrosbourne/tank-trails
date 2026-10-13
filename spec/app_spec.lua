@@ -67,14 +67,72 @@ describe("App lifecycle", function()
     assert.are.equal(2, #app2.run.events)
   end)
 
-  it("closes and files the run on leaving, and tells the player", function()
+  it("leaving marks the run away: nothing is filed, the HUD hides, and the player is told", function()
+    local app, frame, st, updates, dbs = boot({ now = 1000, instance = { name = "The Deadmines", id = 36 }, zoneText = "The Deadmines" })
+    st.instance, st.zoneText, st.now = nil, "Westfall", 1500
+    frame:fire("PLAYER_ENTERING_WORLD")
+    assert.are.equal(1500, dbs.char.run.leftAt)
+    assert.are.equal(app.run, dbs.char.run)
+    assert.is_nil(dbs.account.runs[36])
+    assert.are.equal("none", lastView(updates).mode)
+    assert.truthy(st.chat[#st.chat]:find("Re%-enter"))
+    frame:fire("ZONE_CHANGED")
+    assert.are.equal(1, #app.run.events)   -- outside rooms are not recorded
+    assert.is_false((app:note("x")))
+  end)
+
+  it("promote works from outside on the run that is away", function()
+    local app, frame, st, _, dbs = boot({ now = 1000, instance = { name = "The Deadmines", id = 36 }, zoneText = "The Deadmines" })
+    st.now, st.zoneText = 1030, "Mast Room"
+    frame:fire("ZONE_CHANGED")
+    st.instance, st.zoneText, st.now = nil, "Westfall", 1500
+    frame:fire("PLAYER_ENTERING_WORLD")
+    local ok = app:promote()
+    assert.is_true(ok)
+    assert.are.equal("Recorded 2026-10-12", dbs.account.dungeons[36].routes[1].name)
+  end)
+
+  it("re-entering the same dungeon clears the mark and continues the same run", function()
+    local app, frame, st, updates, dbs = boot({ now = 1000, instance = { name = "The Deadmines", id = 36 }, zoneText = "The Deadmines" })
+    local run = app.run
+    st.instance, st.zoneText, st.now = nil, "Westfall", 1500
+    frame:fire("PLAYER_ENTERING_WORLD")
+    st.instance, st.zoneText, st.now = { name = "The Deadmines", id = 36 }, "Mast Room", 1600
+    frame:fire("ZONE_CHANGED_NEW_AREA")
+    assert.is_nil(run.leftAt)
+    assert.are.equal(run, app.run)
+    assert.are.equal(run, dbs.char.run)
+    assert.are.equal("The Deadmines", run.events[1].room)
+    assert.are.equal("Mast Room", run.events[2].room)
+    assert.are_not.equal("none", lastView(updates).mode)
+  end)
+
+  it("a tick at leftAt + 1800 files the run and clears it from the character", function()
     local app, frame, st, _, dbs = boot({ now = 1000, instance = { name = "The Deadmines", id = 36 }, zoneText = "The Deadmines" })
     st.instance, st.zoneText, st.now = nil, "Westfall", 1500
     frame:fire("PLAYER_ENTERING_WORLD")
-    assert.is_nil(app.run)
+    st.now = 3299
+    st.ticker()
+    assert.is_truthy(dbs.char.run)
+    st.now = 3300
+    st.ticker()
     assert.is_nil(dbs.char.run)
-    assert.are.equal(1500, dbs.account.runs[36][1].endedAt)
-    assert.truthy(st.chat[#st.chat]:find("promote"))
+    assert.is_nil(app.run)
+    assert.are.equal(3300, dbs.account.runs[36][1].endedAt)
+    assert.truthy(st.chat[#st.chat]:find("recorded"))
+  end)
+
+  it("entering a different dungeon while away files the old run as stale", function()
+    local app, frame, st, _, dbs = boot({ now = 1000, instance = { name = "The Deadmines", id = 36 }, zoneText = "The Deadmines" })
+    local old = app.run
+    st.instance, st.zoneText, st.now = nil, "Westfall", 1500
+    frame:fire("PLAYER_ENTERING_WORLD")
+    st.instance, st.zoneText, st.now = { name = "Shadowfang Keep", id = 33 }, "Entrance", 1600
+    frame:fire("PLAYER_ENTERING_WORLD")
+    assert.are.equal(old, dbs.account.runs[36][1])
+    assert.are.equal(1600, old.endedAt)
+    assert.are.equal(33, dbs.char.run.dungeon)
+    assert.are.equal(33, app.run.dungeon)
   end)
 end)
 

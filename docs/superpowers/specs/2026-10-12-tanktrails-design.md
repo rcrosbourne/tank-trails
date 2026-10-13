@@ -172,7 +172,7 @@ Room keys are the client's localized text, so shipped data serves English client
 
 ### 6.1 Run lifecycle
 
-On `PLAYER_ENTERING_WORLD` and `ZONE_CHANGED_NEW_AREA`, if `IsInInstance` reports "party", `GetInstanceInfo` supplies the dungeon id and name. If `TankTrailsCharDB.run` has the same dungeon and no `endedAt`, it resumes; otherwise any stale run is ended and filed, and a new run starts. When the player is no longer in that instance, the run gets `endedAt`, is filed under `TankTrailsDB.runs[id]` (newest first, capped at five) and cleared from the character.
+On `PLAYER_ENTERING_WORLD` and `ZONE_CHANGED_NEW_AREA`, if `IsInInstance` reports "party", `GetInstanceInfo` supplies the dungeon id and name. If `TankTrailsCharDB.run` has the same dungeon and no `endedAt`, it resumes; otherwise any stale run is ended and filed, and a new run starts. Leaving the instance does not end the run: it marks the run as away (`leftAt`), hides the HUD, and keeps the run resumable. Re-entering the same dungeon within 30 minutes clears the mark and continues. When the 30 minutes expire, the ticker ends the run, files it under `TankTrailsDB.runs[id]` (newest first, capped at five) and clears it from the character. Entering a different dungeon files the old run the same way.
 
 ### 6.2 Rooms
 
