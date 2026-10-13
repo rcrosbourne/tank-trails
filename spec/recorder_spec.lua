@@ -96,6 +96,21 @@ describe("Recorder bosses", function()
     assert.is_not_nil(Recorder.boss(run, "Rhahk'Zor", 1234, 1106)) -- past the window
   end)
 
+  it("keeps two manual ticks with different names inside the window", function()
+    local run = newRun(1000)
+    assert.is_not_nil(Recorder.boss(run, "Cookie", nil, 1100, true))
+    assert.is_not_nil(Recorder.boss(run, "Foo", nil, 1102, true))
+    assert.are.equal(2, #run.events)
+  end)
+
+  it("keeps two id-only bosses with secret names inside the window, and still merges a same-id pair", function()
+    local run = newRun(1000)
+    assert.is_not_nil(Recorder.boss(run, nil, 1234, 1100))
+    assert.is_not_nil(Recorder.boss(run, nil, 5678, 1102))
+    assert.is_nil(Recorder.boss(run, nil, 5678, 1104))
+    assert.are.equal(2, #run.events)
+  end)
+
   it("ignores a boss with no identity", function()
     local run = newRun(1000)
     assert.is_nil(Recorder.boss(run, nil, nil, 1100))

@@ -10,6 +10,12 @@ Recorder.TARGET_WINDOW = 10  -- seconds: a pull takes the last out-of-combat tar
 
 local function stamp(run, now) return Util.round1(now - run.startedAt) end
 
+-- Same boss when both carry an encounter id (ids must match); otherwise a non-nil name must match.
+local function sameBoss(last, encounterID, name)
+  if last.id and encounterID then return last.id == encounterID end
+  return name ~= nil and last.name == name
+end
+
 local function push(run, ev)
   table.insert(run.events, ev)
   return ev
@@ -71,7 +77,7 @@ function Recorder.boss(run, name, encounterID, now, manual)
   local key = encounterID or name
   if key == nil then return nil end
   local last = run.lastBoss
-  if last and now - last.at <= Recorder.BOSS_WINDOW and (last.id == encounterID or last.name == name) then
+  if last and now - last.at <= Recorder.BOSS_WINDOW and sameBoss(last, encounterID, name) then
     return nil
   end
   run.lastBoss = { id = encounterID, name = name, at = now }
