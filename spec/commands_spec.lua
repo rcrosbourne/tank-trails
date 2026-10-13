@@ -1,5 +1,6 @@
 local fake = require("helpers.fake_env")
 local Commands = require("Core.Commands")
+local Util = require("Core.Util")
 
 local function fakeApp(results)
   local app, calls = {}, {}
@@ -13,7 +14,7 @@ local function fakeApp(results)
       return r
     end
   end
-  app.errors = { entries = {} }
+  app.errors = Util.newErrorLog()
   function app:print(msg) table.insert(calls, { "print", msg }) end
   return app, calls
 end
@@ -112,5 +113,28 @@ describe("Commands.create", function()
     app.errors.entries = { { label = "zone", message = "boom" } }
     cmd:run("errors")
     assert.are.same({ "print", "zone: boom" }, calls[2])
+  end)
+
+  it("traps errors from actions at every entry point and logs them", function()
+    local env, st = fake.new()
+    local app, calls = fakeApp({
+      note = function() error("note boom") end,
+      importText = function(text, force) if force then error("apply boom") end return "confirm", "X" end,
+      reset = function(force) if force then error("reset boom") end return "confirm" end,
+    })
+    local ui, box = fakeUi()
+    local cmd = Commands.create(app, env, ui)
+    assert.has_no.errors(function() cmd:run("note hello") end)
+    assert.are.equal(1, #app.errors.entries)
+    assert.truthy(app.errors.entries[1].message:find("note boom"))
+    cmd:run("import")
+    assert.has_no.errors(function() box.onApply("pasted") end)
+    assert.has_no.errors(function() st.popup.data.onYes() end)
+    assert.are.equal(2, #app.errors.entries)
+    assert.truthy(app.errors.entries[2].message:find("apply boom"))
+    cmd:run("reset")
+    assert.has_no.errors(function() st.popup.data.onYes() end)
+    assert.are.equal(3, #app.errors.entries)
+    assert.truthy(app.errors.entries[3].message:find("reset boom"))
   end)
 end)

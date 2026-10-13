@@ -22,6 +22,7 @@ end
 
 function Commands.create(app, env, ui)
   local self = setmetatable({ app = app, env = env, ui = ui }, Commands)
+  local function trap(label, fn) return Util.wrap(app.errors, label, fn) end
 
   local function say(ok, msg)
     if msg then app:print(msg) end
@@ -33,7 +34,7 @@ function Commands.create(app, env, ui)
       text = "%s", button1 = "Yes", button2 = "No", timeout = 0, whileDead = true, hideOnEscape = true,
       preferredIndex = 3, OnAccept = function(_, data) data.onYes() end,
     }
-    env.StaticPopup_Show("TANKTRAILS_CONFIRM", text, nil, { onYes = onYes })
+    env.StaticPopup_Show("TANKTRAILS_CONFIRM", text, nil, { onYes = trap("confirm", onYes) })
   end
 
   local function usage()
@@ -61,7 +62,7 @@ function Commands.create(app, env, ui)
       if text then ui.textBox():show("Export: copy this text (Ctrl+C)", text) else app:print(msg) end
     end,
     import = function()
-      ui.textBox():show("Import: paste a dungeon file, then press Import", "", function(text)
+      ui.textBox():show("Import: paste a dungeon file, then press Import", "", trap("import", function(text)
         local r, msg = app:importText(text)
         if r == "confirm" then
           confirm("Replace saved data for " .. tostring(msg) .. "?", function()
@@ -71,7 +72,7 @@ function Commands.create(app, env, ui)
         else
           say(r, msg)
         end
-      end)
+      end))
     end,
     autoopen = function(rest)
       app:setAutoOpen(rest == "on")
@@ -101,9 +102,11 @@ function Commands.create(app, env, ui)
   }
 
   function self:run(msg)
-    local verb, rest = Commands.parse(msg)
-    local handler = self.handlers[verb]
-    if handler then handler(rest) else usage() end
+    trap("command", function()
+      local verb, rest = Commands.parse(msg)
+      local handler = self.handlers[verb]
+      if handler then handler(rest) else usage() end
+    end)()
   end
 
   if env.SlashCmdList then
