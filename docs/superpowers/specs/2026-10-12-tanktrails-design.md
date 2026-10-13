@@ -63,7 +63,7 @@ Four layers. Game calls live only in Wow and UI; Model takes plain tables and re
 | Unit | Does | Used by | Depends on |
 |---|---|---|---|
 | `Model/Route` | Cursor rules (§6.5): fold a route and a list of events into `{cursor, done, offRoute, unexpected}`; compute next step and progress | App, Hud, MapWindow | nothing |
-| `Model/Recorder` | Turns adapter records into run-log events: rooms, pulls with target and deaths, bosses with de-duplication | App | nothing |
+| `Model/Recorder` | Opens or resumes a run (§6.1); turns adapter records into run-log events: rooms, pulls with target and deaths, bosses with de-duplication, notes | App | nothing |
 | `Model/Promote` | Run log to route steps: flap collapse, duplicate merge, boss interleave, note carry-over, boss room and id learning | Commands | nothing |
 | `Model/Merge` | Shipped plus saved overlay into the effective dungeon; creates unknown dungeons | App, Store | nothing |
 | `Model/Serialize` | Deterministic export text; import via `loadstring` in an empty environment; validation | Commands, RoutePanel | nothing |
@@ -101,7 +101,7 @@ TankTrails_RegisterDungeon({
   rooms = {                       -- key = minimap zone text, exactly as shown
     ["The Deadmines"]  = { floor = 1, x = 0.12, y = 0.80 },
     ["Mast Room"]      = { floor = 1, x = 0.40, y = 0.60 },
-    ["Goblin Foundry"] = {},                              -- seen, not yet placed
+    ["Goblin Foundry"] = { seenAt = 1791850300 },         -- seen, not yet placed
     ["Ironclad Cove"]  = { floor = 2, x = 0.50, y = 0.50 },
   },
   bosses = {                      -- key = boss name
@@ -139,10 +139,11 @@ run = { dungeon = 36, name = "The Deadmines", startedAt = 1791850000, endedAt = 
     { t = 30.1, kind = "pull", room = "The Deadmines", target = "Defias Miner", duration = 8.2, deaths = 0 },
     { t = 95.0, kind = "boss", name = "Rhahk'Zor", encounterID = 1234, room = "The Deadmines" },
     { t = 400.2, kind = "boss", name = "Cookie", manual = true, room = "Ironclad Cove" },
+    { t = 410.0, kind = "note", room = "Ironclad Cove", text = "Clear the deck before Smite" },
 } }
 ```
 
-`t` is seconds since `startedAt`. `target` is present only when the pre-pull target name was readable. `manual` marks a `/tt boss` tick, whose `name` comes from the route step it ticked.
+`t` is seconds since `startedAt`. `target` is present only when the pre-pull target name was readable. `manual` marks a `/tt boss` tick, whose `name` comes from the route step it ticked. A `note` event is what `/tt note` writes in learning mode (§6.7).
 
 ### 5.3 Account data
 
@@ -196,11 +197,11 @@ A route is steps 1 to n. State is `{ cursor, done, offRoute, unexpected }`, with
 
 ### 6.6 Route selection
 
-The run uses the dungeon's `activeRoute`, else its first route. When the run's first room event matches no step in that route but matches a step in another route of the same dungeon, the run switches to the first such route for this run only. This is how the Scarlet Monastery wings and route variants select themselves.
+The run uses the dungeon's `activeRoute`, else its first route. Until the first boss kill of the run, a room event that matches no step in the current route but matches a step in another route of the same dungeon switches the run to the first such route, for this run only. This is how the Scarlet Monastery wings and route variants select themselves: the wings share the instance-name entrance room, which appears in every wing's route, and the first wing-specific room picks the wing.
 
 ### 6.7 Learning mode
 
-A dungeon with no routes. The recorder runs unchanged; there is no cursor. The HUD shows the current room, rooms seen and bosses killed, and tells the player to `/tt promote` when the run ends.
+A dungeon with no routes. The recorder runs unchanged; there is no cursor. The HUD shows the current room, rooms seen and bosses killed, and tells the player to `/tt promote` when the run ends. `/tt note <text>` writes a `note` event for the current room; promotion copies it onto that room's step. In route mode `/tt note` edits the current step's note in the saved overlay instead.
 
 ### 6.8 Promotion
 
@@ -294,12 +295,12 @@ Toolchain as YardTrails: `python3 -m hererocks .lua -l 5.1 -r latest`, `.lua/bin
 Specs:
 
 - `route_spec`: forward match, backtrack, off-route, boss re-anchor forward and anywhere, unexpected boss, next skipping done bosses, route complete, progress, replay determinism (same events, same state).
-- `recorder_spec`: room change only on difference, pull open and close with duration, deaths against the open pull, target captured within ten seconds and not after, boss de-duplication within five seconds, secret fields stripped, manual boss event.
+- `recorder_spec`: open versus resume a run, filing a stale run, room change only on difference, note events, pull open and close with duration, deaths against the open pull, target captured within ten seconds and not after, boss de-duplication within five seconds, secret fields stripped, manual boss event.
 - `promote_spec`: flap collapse under fifteen seconds and not over, consecutive duplicate merge, boss interleave by stay, note carry-over by kind and key in order, boss room and id learning, default route name.
 - `merge_spec`: per-key and per-name overrides, shipped routes retained, unknown dungeon creation, `activeRoute`.
 - `serialize_spec`: round trip of the §5.1 example, sorted keys, quotes and newlines in notes, rejection of zero or two registrations, of a step with both keys, and of a position outside 0 to 1.
 - `geometry_spec`: bearing on the four axes and a diagonal, tile grid columns and rows, aspect fit for wide and tall canvases.
-- `instance_watch_spec`: party only, id and name, resume versus new run.
+- `instance_watch_spec`: party only, id and name, nil outside instances.
 
 UI is covered by the in-game checklist only.
 
